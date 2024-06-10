@@ -987,12 +987,12 @@ not_collected_everything:
 	jr nz, key_checks_done ; no valid key press
 	
 	; debug
-	ld a,e
+	;ld a,e
 	;cp 0x25 ; Q key
 	;jp z,exit_game
-	cp 0x0d ; R key
+	;cp 0x0d ; R key
 	;jp z,reset_game
-	jp z,completed_game
+	;jp z,completed_game
 	
 	; convert key to useful info
 	call 0x031e ; KEY TEST
@@ -1239,9 +1239,13 @@ completed_beep_loop:
 	inc a
 	cp 32
 	jr nz,completed_beep_loop
-;debug_completed_TEST:
-	call 55000
 	
+	call check_if_score_qualifies_for_table
+	jp nc,high_score_entry_done
+
+high_score_entry:
+	call 55000
+
 	ld hl,entered_score_name
 	xor a
 	ld b,20
@@ -1476,6 +1480,16 @@ high_score_entry_done:
 	
 	jp reset_game
 
+; Returns Carry Set if the score qualifies for the high score table
+; (HL and DE corrupt on return)
+check_if_score_qualifies_for_table:
+	ld hl,(last_high_score_entry+21)
+	ld de,(score)
+	scf
+	ccf
+	sbc hl,de
+	ret
+
 insert_high_score_entry:
 	; move entries down 1, lose the last
 	ld hl,last_high_score_entry-1
@@ -1674,7 +1688,7 @@ congrats_stars_msg2:
 list_of_success_msg:
 	db 0,0,0x10,6,0x13,1
 	db " YOUR NAME CAN NOW BE SCRIBED   "
-	db "  ONTO THE LIST OF SUCCESS",0
+	db "  ONTO THE LIST OF HEROES",0
 	
 high_score_instructions_msg:
 	db 0x10,0x03 ; ink
@@ -2039,23 +2053,47 @@ out_of_time_end_game:
 
 	ld hl,out_of_time_msg
 	call draw_message
-	
+
 	call end_game_beeps
 	
+	call check_if_score_qualifies_for_table
+	jr nc,out_of_time_done
+	
+	; goto high score table function
+	jp high_score_entry
+
+out_of_time_done:	
 	call wait_for_anykey
 	
 	jp reset_game
-	
+
+;debug_completed_TEST:
+;	ld hl,2050
+;	ld (score),hl
+;	push hl ; instead of the RET stack value, debugging only!
 lost_all_lives:
 	call 0x0d6b ; CLS
 	ld a,2
 	call 0x1601 ; OPEN CHANNEL 2 (screen)
-	
+
+	call check_if_score_qualifies_for_table
+	jr nc,lost_all_lives_done
+
 	ld hl,lost_all_lives_msg
 	call draw_message	
 	
 	call end_game_beeps
+
+	; goto high score table function
+	pop HL ; not gonna RET
+	jp high_score_entry
 	
+lost_all_lives_done:
+	ld hl,lost_all_lives_no_high_msg
+	call draw_message	
+	
+	call end_game_beeps
+
 	call wait_for_anykey
 	
 	pop HL ; not gonna RET
@@ -2064,9 +2102,13 @@ lost_all_lives:
 out_of_time_msg:
 	db 0,0,"WHAT A WALLY...YOU HAVE LEFT       IT FAR TOO LATE. TRY AGAIN!!",0
 	
-lost_all_lives_msg:
+lost_all_lives_no_high_msg:
 	db 0,0,0x06,0x06," WHAT A DISASTER...YOU WEREN'T  "
 	db " EVEN GOOD ENOUGH TO QUALIFY FOR         THE HIGH SCORE TABLE!       ",0
+
+lost_all_lives_msg:
+	db 0,0,0x06,0x06," WHAT A DISASTER...             "
+	db " BETTER LUCK NEXT TIME!!",0
 
 border_save:
 	db 0
