@@ -5,7 +5,7 @@
 ;
 ; NONE of the original BASIC is required, just a simple program to do the following:
 ;
-;	CLEAR 45055: LOAD "" CODE: RANDOMIZE USER 45056
+;	CLEAR 45055: LOAD "" CODE: RANDOMIZE USR 45056
 ;
 ; This version written by @retrotechtive (aka Mark Hogben) 2024
 ;
